@@ -5,16 +5,25 @@ import (
 	"book-library/handler"
 	"book-library/repository"
 	"book-library/service"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/render"
 )
 
+type Health struct {
+	Status string `json:"status"`
+	Msg    string `json:"msg"`
+}
+
 func checkHealth(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "Application/json")
-	msg := "Health check Golang simple"
-	json.NewEncoder(w).Encode(msg)
+	render.JSON(w, r, Health{
+		Status: "ok",
+		Msg:    "Running..",
+	})
 }
 
 func main() {
@@ -29,15 +38,17 @@ func main() {
 	svc := service.NewBookService(repo)
 	hdl := handler.NewBookHandler(svc)
 
-	mux := http.NewServeMux()
+	r := chi.NewRouter()
+	r.Use(middleware.Logger)
+	r.Use(middleware.AllowContentType("application/json"))
 
-	mux.HandleFunc("GET /check", checkHealth)
-	mux.HandleFunc("GET /book", hdl.GetBookHandler)
+	r.Get("/check", checkHealth)
+	r.Get("/book/{id}", hdl.GetBookHandler)
 
 	fmt.Println("Web server running on 0.0.0.0:8000")
 	server := &http.Server{
 		Addr:    ":8000",
-		Handler: mux,
+		Handler: r,
 	}
 	server.ListenAndServe()
 }
