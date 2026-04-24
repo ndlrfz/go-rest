@@ -11,6 +11,8 @@ import (
 
 type BookRepository interface {
 	GetByID(ctx context.Context, id uint) (*model.Book, error)
+	GetBooks(ctx context.Context) ([]model.Book, error)
+	CreateBook(ctx context.Context, book *model.Book) error
 }
 
 type bookRepository struct {
@@ -43,6 +45,52 @@ func (r *bookRepository) GetByID(ctx context.Context, id uint) (*model.Book, err
 	}
 
 	return &book, nil
+}
+
+func (r *bookRepository) GetBooks(ctx context.Context) ([]model.Book, error) {
+	var books []model.Book
+	query := "SELECT title, genre, author FROM books"
+
+	rows, err := r.db.QueryContext(ctx, query)
+	if err != nil {
+		log.Printf("DEBUG: Error row context %v", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var book model.Book
+		var genre pq.StringArray
+
+		err := rows.Scan(&book.Title, &genre, &book.Author)
+		if err != nil {
+			log.Printf("DEBUG: Error scan rows %v", err)
+			return nil, err
+		}
+
+		book.Genre = []string(genre)
+
+		books = append(books, book)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Printf("DEBUG: Error tidak ada rows %v", err)
+		return nil, err
+	}
+
+	return books, nil
+}
+
+func (r *bookRepository) CreateBook(ctx context.Context, book *model.Book) error {
+	query := "INSERT INTO books (title, genre, author) VALUES ($1, $2, $3)"
+
+	_, err := r.db.ExecContext(ctx, query, book.Title, pq.Array(book.Genre), book.Author)
+	if err != nil {
+		return err
+	}
+	// log.Printf("Data masuk: %+v", book)
+
+	return nil
 }
 
 // package repository

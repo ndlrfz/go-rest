@@ -9,6 +9,8 @@ import (
 
 type BookService interface {
 	GetByID(ctx context.Context, id uint) (*model.Book, error)
+	GetBooks(ctx context.Context) ([]model.Book, error)
+	CreateBook(ctx context.Context, book *model.Book) error
 }
 
 type bookService struct {
@@ -30,6 +32,24 @@ func (s *bookService) GetByID(ctx context.Context, id uint) (*model.Book, error)
 	}
 
 	return book, nil
+}
+
+func (s *bookService) GetBooks(ctx context.Context) ([]model.Book, error) {
+	books, err := s.repo.GetBooks(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return books, nil
+}
+
+func (s *bookService) CreateBook(ctx context.Context, book *model.Book) error {
+	err := s.repo.CreateBook(ctx, book)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // package service

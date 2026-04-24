@@ -43,6 +43,8 @@ func main() {
 	r.Use(middleware.AllowContentType("application/json"))
 
 	r.Get("/check", checkHealth)
+	r.Get("/books", hdl.GetBooksAll)
+	r.Post("/book", hdl.CreateBook)
 	r.Get("/book/{id}", hdl.GetBookHandler)
 
 	fmt.Println("Web server running on 0.0.0.0:8000")

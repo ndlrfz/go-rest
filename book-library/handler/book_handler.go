@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"book-library/model"
 	"book-library/service"
 	"book-library/utils"
 	"fmt"
@@ -18,6 +19,18 @@ type BookHandler struct {
 
 func NewBookHandler(service service.BookService) *BookHandler {
 	return &BookHandler{service: service}
+}
+
+func (h *BookHandler) GetBooksAll(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	books, err := h.service.GetBooks(ctx)
+	if err != nil {
+		render.Render(w, r, utils.ErrNotFound)
+		return
+	}
+
+	render.JSON(w, r, books)
+
 }
 
 func (h *BookHandler) GetBookHandler(w http.ResponseWriter, r *http.Request) {
@@ -53,4 +66,21 @@ func (h *BookHandler) GetBookHandler(w http.ResponseWriter, r *http.Request) {
 	// w.Header().Set("Content-Type", "application/json")
 	// json.NewEncoder(w).Encode(book)
 	render.JSON(w, r, book)
+}
+
+func (h *BookHandler) CreateBook(w http.ResponseWriter, r *http.Request) {
+	var req model.Book
+
+	if err := render.DecodeJSON(r.Body, &req); err != nil {
+		render.Render(w, r, utils.ErrInvalidRequest(err))
+		return
+	}
+
+	if err := h.service.CreateBook(r.Context(), &req); err != nil {
+		render.Render(w, r, utils.ErrRender(err))
+		return
+	}
+
+	render.Status(r, http.StatusCreated)
+	render.JSON(w, r, map[string]string{"message": "Book created successfully"})
 }
