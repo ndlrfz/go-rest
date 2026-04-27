@@ -1,18 +1,25 @@
 package repository
 
 import (
+	"book-library/dto"
 	"book-library/model"
 	"context"
 	"database/sql"
 	"errors"
-	"github.com/lib/pq"
+	"fmt"
 	"log"
+
+	"github.com/lib/pq"
 )
 
 type BookRepository interface {
 	GetByID(ctx context.Context, id uint) (*model.Book, error)
 	GetBooks(ctx context.Context) ([]model.Book, error)
-	CreateBook(ctx context.Context, book *model.Book) error
+	CreateBook(ctx context.Context, book *dto.BookReq) error
+	DeleteBook(ctx context.Context, id uint) error
+	UpdateBook(ctx context.Context, book *dto.BookReq, id uint) error
+	IsBookExists(ctx context.Context, title string) (bool, error)
+	IsTitleBlank(ctx context.Context, title string) (bool, error)
 }
 
 type bookRepository struct {
@@ -81,14 +88,66 @@ func (r *bookRepository) GetBooks(ctx context.Context) ([]model.Book, error) {
 	return books, nil
 }
 
-func (r *bookRepository) CreateBook(ctx context.Context, book *model.Book) error {
+func (r *bookRepository) CreateBook(ctx context.Context, book *dto.BookReq) error {
 	query := "INSERT INTO books (title, genre, author) VALUES ($1, $2, $3)"
 
-	_, err := r.db.ExecContext(ctx, query, book.Title, pq.Array(book.Genre), book.Author)
+	result, err := r.db.ExecContext(ctx, query, book.Title, pq.Array(book.Genre), book.Author)
 	if err != nil {
 		return err
 	}
 	// log.Printf("Data masuk: %+v", book)
+
+	_, err = result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *bookRepository) IsBookExists(ctx context.Context, title string) (bool, error) {
+	var exists bool
+	query := "SELECT EXISTS(SELECT 1 FROM books WHERE title = $1)"
+	err := r.db.QueryRowContext(ctx, query, title).Scan(&exists)
+	return exists, err
+}
+
+func (r *bookRepository) UpdateBook(ctx context.Context, book *dto.BookReq, id uint) error {
+	query := "UPDATE books SET title=$1, genre=$2, author=$3 WHERE id=$4"
+
+	result, err := r.db.ExecContext(ctx, query, book.Title, pq.Array(book.Genre), book.Author, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("Book with id %v is not found", id)
+	}
+
+	return nil
+}
+
+func (r *bookRepository) DeleteBook(ctx context.Context, id uint) error {
+	query := "DELETE FROM books WHERE id = $1"
+
+	result, err := r.db.ExecContext(ctx, query, id)
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("Tidak ada buku dengan ID: %v", id)
+	}
 
 	return nil
 }

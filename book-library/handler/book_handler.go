@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"book-library/model"
+	"book-library/dto"
 	"book-library/service"
 	"book-library/utils"
 	"fmt"
@@ -69,7 +69,7 @@ func (h *BookHandler) GetBookHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *BookHandler) CreateBook(w http.ResponseWriter, r *http.Request) {
-	var req model.Book
+	var req dto.BookReq
 
 	if err := render.DecodeJSON(r.Body, &req); err != nil {
 		render.Render(w, r, utils.ErrInvalidRequest(err))
@@ -83,4 +83,43 @@ func (h *BookHandler) CreateBook(w http.ResponseWriter, r *http.Request) {
 
 	render.Status(r, http.StatusCreated)
 	render.JSON(w, r, map[string]string{"message": "Book created successfully"})
+}
+
+func (h *BookHandler) UpdateBook(w http.ResponseWriter, r *http.Request) {
+
+	var reqBook dto.BookReq
+	idParam := chi.URLParam(r, "id")
+	id, _ := strconv.Atoi(idParam)
+	fmt.Println(id)
+	fmt.Println(&reqBook)
+
+	if err := render.DecodeJSON(r.Body, &reqBook); err != nil {
+		render.Render(w, r, utils.ErrInvalidRequest(err))
+		return
+	}
+
+	if err := h.service.UpdateBook(r.Context(), &reqBook, uint(id)); err != nil {
+		render.Render(w, r, utils.ErrInvalidRequest(err))
+		return
+	}
+
+}
+
+func (h *BookHandler) DeleteBook(w http.ResponseWriter, r *http.Request) {
+	idParam := chi.URLParam(r, "id")
+
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		render.Render(w, r, utils.ErrInvalidRequest(err))
+		return
+	}
+
+	if err := h.service.DeleteBook(r.Context(), uint(id)); err != nil {
+		render.Render(w, r, utils.ErrNotFound)
+		return
+	}
+
+	render.Status(r, http.StatusOK)
+	render.JSON(w, r, map[string]string{"message": "Book deleted successfully"})
+
 }

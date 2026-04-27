@@ -46,6 +46,8 @@ func main() {
 	r.Get("/books", hdl.GetBooksAll)
 	r.Post("/book", hdl.CreateBook)
 	r.Get("/book/{id}", hdl.GetBookHandler)
+	r.Put("/book/{id}", hdl.UpdateBook)
+	r.Delete("/book/{id}", hdl.DeleteBook)
 
 	fmt.Println("Web server running on 0.0.0.0:8000")
 	server := &http.Server{
